@@ -84,27 +84,6 @@ export default function Home() {
     document.body.removeChild(link);
   };
 
-  const handleDownloadFile = (googleDriveLink: string, fileLanguage: string) => {
-    if (!googleDriveLink) {
-      alert(`${t.noFilePathAvailable} ${fileLanguage} version.`);
-      return;
-    }
-
-    // Convert Google Drive share links to direct download links if needed
-    let directLink = googleDriveLink;
-    
-    // Convert Google Drive share links to direct download format
-    // Example: https://drive.google.com/file/d/FILE_ID/view -> https://drive.google.com/uc?id=FILE_ID
-    const fileIdMatch = googleDriveLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileIdMatch) {
-      const fileId = fileIdMatch[1];
-      directLink = `https://drive.google.com/uc?id=${fileId}`;
-    }
-    
-    // Open the Google Drive link directly in a new tab
-    // This allows users to view/download the file from Google Drive
-    window.open(directLink, '_blank', 'noopener,noreferrer');
-  };
 
   const originalCsvLinkNode = (tableData.length > 0 && !error) ? (
     <a
@@ -172,7 +151,6 @@ export default function Home() {
           <ReportsTable
             data={tableData}
             onDownloadCSV={handleDownloadCSV}
-            onDownloadFile={handleDownloadFile}
             translations={t}
             originalCsvLinkNode={originalCsvLinkNode}
           />

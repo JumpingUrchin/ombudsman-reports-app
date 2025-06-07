@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Download, Search, Filter, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, Search, Filter, ChevronUp, ChevronDown } from 'lucide-react';
 import { TableRow } from '@/lib/types';
 import { convertDepartmentCodesToNames, convertReportTypeCodeToDisplayName, getOrganizationNames } from '@/lib/reportProcessor';
 import { Translations } from '@/lib/i18n';
@@ -8,7 +8,6 @@ import { useLanguage } from '@/lib/useLanguage';
 interface ReportsTableProps {
   data: TableRow[];
   onDownloadCSV: (filteredData: TableRow[]) => void;
-  onDownloadFile: (filePath: string, language: string) => void;
   translations: Translations;
   originalCsvLinkNode?: React.ReactNode;
 }
@@ -16,7 +15,7 @@ interface ReportsTableProps {
 type SortField = 'Year' | 'Case Reference' | 'Completed on' | 'Report Type' | 'Organizations concerned';
 type SortDirection = 'asc' | 'desc';
 
-export default function ReportsTable({ data, onDownloadCSV, onDownloadFile, translations: t, originalCsvLinkNode }: ReportsTableProps) {
+export default function ReportsTable({ data, onDownloadCSV, translations: t, originalCsvLinkNode }: ReportsTableProps) {
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -179,28 +178,31 @@ export default function ReportsTable({ data, onDownloadCSV, onDownloadFile, tran
   const convertToGoogleDriveDirectLink = (googleDriveLink: string | undefined): string | null => {
     if (!googleDriveLink) return null;
     
-    // If it's already a direct Google Drive link, return as is
-    if (googleDriveLink.includes('drive.google.com/uc?') || googleDriveLink.includes('drive.google.com/file/d/')) {
-      return googleDriveLink;
-    }
-    
     // For Google Drive share links, convert to direct download format
-    // Example: https://drive.google.com/file/d/FILE_ID/view -> https://drive.google.com/uc?id=FILE_ID
+    // Example: https://drive.google.com/file/d/FILE_ID/view -> https://drive.google.com/uc?export=download&id=FILE_ID
     const fileIdMatch = googleDriveLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (fileIdMatch) {
       const fileId = fileIdMatch[1];
-      return `https://drive.google.com/uc?id=${fileId}`;
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    }
+    
+    // If it's already a direct Google Drive download link, return as is
+    if (googleDriveLink.includes('drive.google.com/uc?export=download')) {
+      return googleDriveLink;
+    }
+    
+    // If it's a uc?id= format, convert to download format
+    if (googleDriveLink.includes('drive.google.com/uc?id=')) {
+      const idMatch = googleDriveLink.match(/id=([a-zA-Z0-9_-]+)/);
+      if (idMatch) {
+        return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
+      }
     }
     
     // Return the original link if we can't parse it
     return googleDriveLink;
   };
 
-  const handleDownloadFile = (googleDriveLink: string | undefined, language: string) => {
-    if (googleDriveLink) {
-      onDownloadFile(googleDriveLink, language);
-    }
-  };
 
   if (data.length === 0) {
     return (
@@ -375,37 +377,34 @@ export default function ReportsTable({ data, onDownloadCSV, onDownloadFile, tran
                       {row['Google Drive Link (EN)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (EN)']) && (
                         <a
                           href={convertToGoogleDriveDirectLink(row['Google Drive Link (EN)'])!}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          download
                           className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Open English version"
+                          title="Download English version"
                         >
                           EN
-                          <ExternalLink className="h-3 w-3" />
+                          <Download className="h-3 w-3" />
                         </a>
                       )}
                       {row['Google Drive Link (TC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (TC)']) && (
                         <a
                           href={convertToGoogleDriveDirectLink(row['Google Drive Link (TC)'])!}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          download
                           className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Open Traditional Chinese version"
+                          title="Download Traditional Chinese version"
                         >
                           繁中
-                          <ExternalLink className="h-3 w-3" />
+                          <Download className="h-3 w-3" />
                         </a>
                       )}
                       {row['Google Drive Link (SC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (SC)']) && (
                         <a
                           href={convertToGoogleDriveDirectLink(row['Google Drive Link (SC)'])!}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          download
                           className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Open Simplified Chinese version"
+                          title="Download Simplified Chinese version"
                         >
                           简中
-                          <ExternalLink className="h-3 w-3" />
+                          <Download className="h-3 w-3" />
                         </a>
                       )}
                     </div>
