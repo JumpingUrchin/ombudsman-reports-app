@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  ombudsman-reports-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      timeout: 10s
+      interval: 30s
+      retries: 3
+      start_period: 40s
+
+  # Development service (optional)
+  ombudsman-reports-app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: yarn dev
+    profiles:
+      - dev
