@@ -21,7 +21,7 @@ export default function Home() {
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch('/reports_table.csv');
+        const response = await fetch('reports_table.csv');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -108,7 +108,7 @@ export default function Home() {
 
   const originalCsvLinkNode = (tableData.length > 0 && !error) ? (
     <a
-      href="/reports_table.csv"
+      href="reports_table.csv"
       download="reports_table_original.csv"
       className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
     >
