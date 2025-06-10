@@ -23,6 +23,9 @@ export interface Translations {
   titleEnglish: string;
   titleTraditionalChinese: string;
   titleSimplifiedChinese: string;
+  titleTC: string;
+  titleEN: string;
+  titleCN: string;
   organizations: string;
   completedOn: string;
   reportType: string;
@@ -78,6 +81,9 @@ export const translations: Record<Language, Translations> = {
     titleEnglish: 'Title (English)',
     titleTraditionalChinese: 'Title (Traditional Chinese)',
     titleSimplifiedChinese: 'Title (Simplified Chinese)',
+    titleTC: 'Title (TC)',
+    titleEN: 'Title (EN)',
+    titleCN: 'Title (CN)',
     organizations: 'Organizations',
     completedOn: 'Completed On',
     reportType: 'Report Type',
@@ -132,6 +138,9 @@ export const translations: Record<Language, Translations> = {
     titleEnglish: '標題（英文）',
     titleTraditionalChinese: '標題（繁體中文）',
     titleSimplifiedChinese: '標題（簡體中文）',
+    titleTC: '標題 (繁體中文)',
+    titleEN: '標題 (英文)',
+    titleCN: '標題 (簡體中文)',
     organizations: '相關機構',
     completedOn: '完成日期',
     reportType: '報告類型',

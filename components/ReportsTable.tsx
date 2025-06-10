@@ -156,11 +156,11 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
     setLanguageFilter('');
   };
 
-  const renderSortableHeader = (field: SortField, label: string) => {
+  const renderSortableHeader = (field: SortField, label: string, widthClassName: string = '') => {
     const isActive = sortField === field;
     return (
       <th
-        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${widthClassName}`}
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -323,26 +323,36 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
       {/* Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 table-fixed"> {/* Added table-fixed */}
             <thead className="bg-gray-50">
               <tr>
                 {renderSortableHeader('Year', t.year)}
-                {renderSortableHeader('Case Reference', t.caseReference)}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t.titleEnglish}
+                {renderSortableHeader('Report Type', t.reportType, 'w-32')}
+                {/* Custom header for Case Reference to apply width and reduced padding */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-16" // Set width to w-16
+                  onClick={() => handleSort('Case Reference')}
+                >
+                  <div className="flex items-center gap-1">
+                    {t.caseReference}
+                    {sortField === 'Case Reference' && (
+                      sortDirection === 'asc'
+                        ? <ChevronUp className="h-4 w-4" />
+                        : <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t.titleTraditionalChinese}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                  {t.titleTC}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t.titleSimplifiedChinese}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                  {t.titleEN}
                 </th>
-                {renderSortableHeader('Organizations concerned', t.organizations)}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                  {t.titleCN}
+                </th>
+                {renderSortableHeader('Organizations concerned', t.organizations, 'w-48')}
                 {renderSortableHeader('Completed on', t.completedOn)}
-                {renderSortableHeader('Report Type', t.reportType)}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t.viewFiles}
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -351,63 +361,59 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row.Year}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 w-32">
+                    {convertReportTypeCodeToDisplayName(row['Report Type'], reportTypeLanguage, row)}
+                  </td>
+                  <td className="px-2 py-4 text-sm text-gray-900 w-16 break-words"> {/* Set width to w-16 */}
                     {row['Case Reference']}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={row['Title in English']}>
-                    {row['Title in English']}
+                  {/* Title (TC) with link and wrapping */}
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in Traditional Chinese']}>
+                    {row['Google Drive Link (TC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (TC)']) ? (
+                      <a
+                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (TC)'])!}
+                        download
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                      >
+                        {row['Title in Traditional Chinese']}
+                      </a>
+                    ) : (
+                      row['Title in Traditional Chinese']
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={row['Title in Traditional Chinese']}>
-                    {row['Title in Traditional Chinese']}
+                  {/* Title (EN) with link and wrapping */}
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in English']}>
+                    {row['Google Drive Link (EN)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (EN)']) ? (
+                      <a
+                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (EN)'])!}
+                        download
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                      >
+                        {row['Title in English']}
+                      </a>
+                    ) : (
+                      row['Title in English']
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={row['Title in Simplified Chinese']}>
-                    {row['Title in Simplified Chinese']}
+                  {/* Title (CN) with link and wrapping */}
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in Simplified Chinese']}>
+                    {row['Google Drive Link (SC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (SC)']) ? (
+                      <a
+                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (SC)'])!}
+                        download
+                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                      >
+                        {row['Title in Simplified Chinese']}
+                      </a>
+                    ) : (
+                      row['Title in Simplified Chinese']
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate" title={getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}>
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-48" title={getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}>
                     {getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row['Completed on']}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {convertReportTypeCodeToDisplayName(row['Report Type'], reportTypeLanguage, row)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      {row['Google Drive Link (EN)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (EN)']) && (
-                        <a
-                          href={convertToGoogleDriveDirectLink(row['Google Drive Link (EN)'])!}
-                          download
-                          className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Download English version"
-                        >
-                          EN
-                          <Download className="h-3 w-3" />
-                        </a>
-                      )}
-                      {row['Google Drive Link (TC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (TC)']) && (
-                        <a
-                          href={convertToGoogleDriveDirectLink(row['Google Drive Link (TC)'])!}
-                          download
-                          className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Download Traditional Chinese version"
-                        >
-                          繁中
-                          <Download className="h-3 w-3" />
-                        </a>
-                      )}
-                      {row['Google Drive Link (SC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (SC)']) && (
-                        <a
-                          href={convertToGoogleDriveDirectLink(row['Google Drive Link (SC)'])!}
-                          download
-                          className="text-blue-600 hover:text-blue-900 transition-colors inline-flex items-center gap-1"
-                          title="Download Simplified Chinese version"
-                        >
-                          简中
-                          <Download className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
                   </td>
                 </tr>
               ))}
