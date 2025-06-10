@@ -11,22 +11,26 @@ import { AlertCircle, CheckCircle, Download } from 'lucide-react';
 interface ReportsPageClientProps {
   initialTableData: TableRow[];
   initialError: string | null;
+  ssrFallback?: React.ReactNode;
 }
 
-export default function ReportsPageClient({ initialTableData, initialError }: ReportsPageClientProps) {
+export default function ReportsPageClient({ initialTableData, initialError, ssrFallback }: ReportsPageClientProps) {
   const { language, changeLanguage, t } = useLanguage();
   const [tableData, setTableData] = useState<TableRow[]>(initialTableData);
   const [error, setError] = useState<string | null>(initialError);
-  // isLoading is no longer for initial load, but could be used for other async operations if any
-  // For now, initial loading is handled by SSR.
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // If initial data is empty and no error, it implies data might still be loading or truly empty.
-    // However, with SSR, initialTableData should be populated.
-    // This effect can be used to update tableData if initialTableData prop changes, though not typical for SSR.
+    // Mark as client-side after hydration
+    setIsClient(true);
     setTableData(initialTableData);
     setError(initialError);
   }, [initialTableData, initialError]);
+
+  // Show SSR fallback during server-side rendering and before client hydration
+  if (!isClient && ssrFallback) {
+    return <>{ssrFallback}</>;
+  }
 
   const handleDownloadCSV = (filteredData: TableRow[]) => {
     if (filteredData.length === 0) return;

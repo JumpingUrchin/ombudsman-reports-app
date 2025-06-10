@@ -302,13 +302,13 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
       {/* Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 table-fixed">{/* Added table-fixed */}
-            <thead className="bg-gray-50"><tr>
+          <table className="min-w-full divide-y divide-gray-200 table-fixed">
+            <thead className="bg-gray-50">
+              <tr>
                 {renderSortableHeader('Year', t.year)}
-                {renderSortableHeader('Report Type', t.reportType, 'w-40')} {/* Increased from w-32 */}
-                {/* Custom header for Case Reference to apply width and reduced padding */}
+                {renderSortableHeader('Report Type', t.reportType, 'w-40')}
                 <th
-                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors whitespace-nowrap w-16" // Set width to w-16, added whitespace-nowrap
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors whitespace-nowrap w-16"
                   onClick={() => handleSort('Case Reference')}
                 >
                   <div className="flex items-center gap-1">
@@ -320,20 +320,21 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5">
                   {t.titleTC}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5">
                   {t.titleEN}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5">
                   {t.titleCN}
                 </th>
-                {renderSortableHeader('Organizations concerned', t.organizations, 'w-64')} {/* Increased from w-48 */}
+                {renderSortableHeader('Organizations concerned', t.organizations, 'w-64')}
                 {renderSortableHeader('Completed on', t.completedOn)}
-              </tr></thead>
-            <tbody className="bg-white divide-y divide-gray-200">{
-              filteredAndSortedData.map((row, index) => (
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredAndSortedData.map((row, index) => (
                 <tr key={index} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row.Year}
@@ -349,10 +350,9 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                     {getFileLink(row['File Path (Traditional Chinese)']) ? (
                       <a
                         href={getFileLink(row['File Path (Traditional Chinese)'])!}
-                        // target="_blank" // Removed to open in the same tab
-                        // rel="noopener noreferrer" // Not needed without target="_blank"
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1"
                       >
+                        <Download className="h-3 w-3 flex-shrink-0" />
                         {row['Title in Traditional Chinese']}
                       </a>
                     ) : (
@@ -364,10 +364,9 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                     {getFileLink(row['File Path (English)']) ? (
                       <a
                         href={getFileLink(row['File Path (English)'])!}
-                        // target="_blank" // Removed
-                        // rel="noopener noreferrer" // Removed
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1"
                       >
+                        <Download className="h-3 w-3 flex-shrink-0" />
                         {row['Title in English']}
                       </a>
                     ) : (
@@ -379,10 +378,9 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                     {getFileLink(row['File Path (Simplified Chinese)']) ? (
                       <a
                         href={getFileLink(row['File Path (Simplified Chinese)'])!}
-                        // target="_blank" // Removed
-                        // rel="noopener noreferrer" // Removed
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        className="text-blue-600 hover:text-blue-900 transition-colors flex items-center gap-1"
                       >
+                        <Download className="h-3 w-3 flex-shrink-0" />
                         {row['Title in Simplified Chinese']}
                       </a>
                     ) : (
@@ -395,8 +393,9 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row['Completed on']}
                   </td>
-                </tr>))
-            }</tbody>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </div>
