@@ -11,11 +11,12 @@ import { AlertCircle, CheckCircle, Download } from 'lucide-react';
 interface ReportsPageClientProps {
   initialTableData: TableRow[];
   initialError: string | null;
+  locale?: 'en' | 'zh-HK';
   ssrFallback?: React.ReactNode;
 }
 
-export default function ReportsPageClient({ initialTableData, initialError, ssrFallback }: ReportsPageClientProps) {
-  const { language, changeLanguage, t } = useLanguage();
+export default function ReportsPageClient({ initialTableData, initialError, locale, ssrFallback }: ReportsPageClientProps) {
+  const { language, changeLanguage, t } = useLanguage(locale);
   const [tableData, setTableData] = useState<TableRow[]>(initialTableData);
   const [error, setError] = useState<string | null>(initialError);
   const [isClient, setIsClient] = useState(false);
