@@ -65,9 +65,10 @@ function getCacheKey(filePathFromUrl: string): string {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filePath: string[] } }
+  { params }: { params: Promise<{ filePath: string[] }> }
 ) {
-  const filePathFromUrl = params.filePath.join('/');
+  const resolvedParams = await params;
+  const filePathFromUrl = resolvedParams.filePath.join('/');
   const cacheKey = getCacheKey(filePathFromUrl);
   const cachedFilePath = path.join(PDF_CACHE_DIR, cacheKey);
 
