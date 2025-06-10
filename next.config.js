@@ -9,8 +9,8 @@ const nextConfig = {
   // All routing and language detection will be handled client-side
   
   // GitHub Pages deployment configuration
-  basePath: process.env.NODE_ENV === 'production' ? '/ombudsman-reports-app' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/ombudsman-reports-app/' : '',
+  // basePath: process.env.NODE_ENV === 'production' ? '/ombudsman-reports-app' : '',
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '/ombudsman-reports-app/' : '',
 }
 
 module.exports = nextConfig
