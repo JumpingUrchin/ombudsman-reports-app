@@ -160,7 +160,7 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
     const isActive = sortField === field;
     return (
       <th
-        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${widthClassName}`}
+        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors whitespace-nowrap ${widthClassName}`}
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -175,34 +175,13 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
     );
   };
 
-  const convertToGoogleDriveDirectLink = (googleDriveLink: string | undefined): string | null => {
-    if (!googleDriveLink) return null;
-    
-    // For Google Drive share links, convert to direct download format
-    // Example: https://drive.google.com/file/d/FILE_ID/view -> https://drive.google.com/uc?export=download&id=FILE_ID
-    const fileIdMatch = googleDriveLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (fileIdMatch) {
-      const fileId = fileIdMatch[1];
-      return `https://drive.google.com/uc?export=download&id=${fileId}`;
-    }
-    
-    // If it's already a direct Google Drive download link, return as is
-    if (googleDriveLink.includes('drive.google.com/uc?export=download')) {
-      return googleDriveLink;
-    }
-    
-    // If it's a uc?id= format, convert to download format
-    if (googleDriveLink.includes('drive.google.com/uc?id=')) {
-      const idMatch = googleDriveLink.match(/id=([a-zA-Z0-9_-]+)/);
-      if (idMatch) {
-        return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
-      }
-    }
-    
-    // Return the original link if we can't parse it
-    return googleDriveLink;
-  };
+  // The convertToGoogleDriveDirectLink function is removed as this logic is now handled by the server route.
 
+  const getFileLink = (filePathOrUrl: string | undefined): string | null => {
+    if (!filePathOrUrl) return null;
+    // Pass the raw path; Next.js router and the server handler will manage it.
+    return `/files/${filePathOrUrl}`;
+  };
 
   if (data.length === 0) {
     return (
@@ -323,14 +302,13 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
       {/* Table */}
       <div className="bg-white rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 table-fixed"> {/* Added table-fixed */}
-            <thead className="bg-gray-50">
-              <tr>
+          <table className="min-w-full divide-y divide-gray-200 table-fixed">{/* Added table-fixed */}
+            <thead className="bg-gray-50"><tr>
                 {renderSortableHeader('Year', t.year)}
-                {renderSortableHeader('Report Type', t.reportType, 'w-32')}
+                {renderSortableHeader('Report Type', t.reportType, 'w-40')} {/* Increased from w-32 */}
                 {/* Custom header for Case Reference to apply width and reduced padding */}
                 <th
-                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors w-16" // Set width to w-16
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors whitespace-nowrap w-16" // Set width to w-16, added whitespace-nowrap
                   onClick={() => handleSort('Case Reference')}
                 >
                   <div className="flex items-center gap-1">
@@ -342,26 +320,25 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
                   {t.titleTC}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
                   {t.titleEN}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-1/5"> {/* Added whitespace-nowrap */}
                   {t.titleCN}
                 </th>
-                {renderSortableHeader('Organizations concerned', t.organizations, 'w-48')}
+                {renderSortableHeader('Organizations concerned', t.organizations, 'w-64')} {/* Increased from w-48 */}
                 {renderSortableHeader('Completed on', t.completedOn)}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAndSortedData.map((row, index) => (
+              </tr></thead>
+            <tbody className="bg-white divide-y divide-gray-200">{
+              filteredAndSortedData.map((row, index) => (
                 <tr key={index} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row.Year}
                   </td>
-                  <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 w-32">
+                  <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-900 w-40"> {/* Increased from w-32 */}
                     {convertReportTypeCodeToDisplayName(row['Report Type'], reportTypeLanguage, row)}
                   </td>
                   <td className="px-2 py-4 text-sm text-gray-900 w-16 break-words"> {/* Set width to w-16 */}
@@ -369,10 +346,11 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                   </td>
                   {/* Title (TC) with link and wrapping */}
                   <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in Traditional Chinese']}>
-                    {row['Google Drive Link (TC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (TC)']) ? (
+                    {getFileLink(row['File Path (Traditional Chinese)']) ? (
                       <a
-                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (TC)'])!}
-                        download
+                        href={getFileLink(row['File Path (Traditional Chinese)'])!}
+                        // target="_blank" // Removed to open in the same tab
+                        // rel="noopener noreferrer" // Not needed without target="_blank"
                         className="text-blue-600 hover:text-blue-900 transition-colors"
                       >
                         {row['Title in Traditional Chinese']}
@@ -383,10 +361,11 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                   </td>
                   {/* Title (EN) with link and wrapping */}
                   <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in English']}>
-                    {row['Google Drive Link (EN)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (EN)']) ? (
+                    {getFileLink(row['File Path (English)']) ? (
                       <a
-                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (EN)'])!}
-                        download
+                        href={getFileLink(row['File Path (English)'])!}
+                        // target="_blank" // Removed
+                        // rel="noopener noreferrer" // Removed
                         className="text-blue-600 hover:text-blue-900 transition-colors"
                       >
                         {row['Title in English']}
@@ -397,10 +376,11 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                   </td>
                   {/* Title (CN) with link and wrapping */}
                   <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-1/5" title={row['Title in Simplified Chinese']}>
-                    {row['Google Drive Link (SC)'] && convertToGoogleDriveDirectLink(row['Google Drive Link (SC)']) ? (
+                    {getFileLink(row['File Path (Simplified Chinese)']) ? (
                       <a
-                        href={convertToGoogleDriveDirectLink(row['Google Drive Link (SC)'])!}
-                        download
+                        href={getFileLink(row['File Path (Simplified Chinese)'])!}
+                        // target="_blank" // Removed
+                        // rel="noopener noreferrer" // Removed
                         className="text-blue-600 hover:text-blue-900 transition-colors"
                       >
                         {row['Title in Simplified Chinese']}
@@ -409,15 +389,14 @@ export default function ReportsTable({ data, onDownloadCSV, translations: t, ori
                       row['Title in Simplified Chinese']
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-48" title={getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}>
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-normal break-words w-64" title={getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}> {/* Increased from w-48 */}
                     {getOrganizationNames(row['Organizations concerned'], organizationLanguage) || row['Organizations concerned']}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row['Completed on']}
                   </td>
-                </tr>
-              ))}
-            </tbody>
+                </tr>))
+            }</tbody>
           </table>
         </div>
       </div>

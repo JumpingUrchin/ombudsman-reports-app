@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // output: 'export', // Commented out as per user request for dynamic SSR
   trailingSlash: true,
   images: {
     unoptimized: true,
