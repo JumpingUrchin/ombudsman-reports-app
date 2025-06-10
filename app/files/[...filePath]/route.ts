@@ -4,12 +4,13 @@ import path from 'path';
 import Papa from 'papaparse';
 import { TableRow } from '@/lib/types';
 import crypto from 'crypto'; // For generating safe cache filenames
+import { put, head, list, del } from '@vercel/blob';
 
 export const dynamic = 'force-dynamic';
 
 const PDF_CACHE_DIR = path.join(process.cwd(), '.cache', 'pdf_files');
 
-// Ensure cache directory exists
+// Ensure cache directory exists (for local development)
 async function ensureCacheDirExists() {
   try {
     await fs.mkdir(PDF_CACHE_DIR, { recursive: true });
@@ -19,7 +20,14 @@ async function ensureCacheDirExists() {
     // For now, if it fails, caching will likely fail.
   }
 }
-ensureCacheDirExists(); // Call on module load
+
+// Only create local cache directory in development
+if (process.env.NODE_ENV === 'development') {
+  ensureCacheDirExists(); // Call on module load
+}
+
+// Check if we're in production (Vercel)
+const isProduction = process.env.NODE_ENV === 'production';
 
 const convertToGoogleDriveDirectLink = (googleDriveLink: string): string => {
   const fileIdMatch = googleDriveLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -63,6 +71,98 @@ function getCacheKey(filePathFromUrl: string): string {
   return crypto.createHash('sha256').update(filePathFromUrl).digest('hex') + '.pdf';
 }
 
+// Check if file exists in Vercel Blob storage
+async function checkBlobCache(cacheKey: string): Promise<string | null> {
+  try {
+    const blobPath = `pdf-cache/${cacheKey}`;
+    const blobInfo = await head(blobPath);
+    return blobInfo?.url || null;
+  } catch (error) {
+    return null; // File doesn't exist in blob storage
+  }
+}
+
+// Store file in Vercel Blob storage
+async function storeBlobCache(cacheKey: string, pdfBuffer: ArrayBuffer): Promise<string | null> {
+  try {
+    // Check if we need to clean up cache before storing
+    await manageBlobCacheSize();
+    
+    const blobPath = `pdf-cache/${cacheKey}`;
+    const { url } = await put(blobPath, pdfBuffer, {
+      access: 'public',
+      contentType: 'application/pdf'
+    });
+    return url;
+  } catch (error) {
+    console.error('Failed to store PDF in blob cache:', error);
+    return null;
+  }
+}
+
+// Manage Vercel Blob cache size - delete oldest 50% of files when approaching 1GB limit
+async function manageBlobCacheSize(): Promise<void> {
+  try {
+    // List all files in the pdf-cache folder
+    const { blobs } = await list({ prefix: 'pdf-cache/' });
+    
+    if (blobs.length === 0) return;
+    
+    // Calculate total size
+    const totalSize = blobs.reduce((sum, blob) => sum + blob.size, 0);
+    const sizeLimitBytes = 900 * 1024 * 1024; // 900MB threshold (leave some buffer before 1GB)
+    
+    if (totalSize < sizeLimitBytes) {
+      return; // No cleanup needed
+    }
+    
+    console.log(`Blob cache size (${Math.round(totalSize / 1024 / 1024)}MB) approaching limit. Starting cleanup...`);
+    
+    // Sort by uploadedAt (oldest first) - this serves as our access time approximation
+    const sortedBlobs = blobs.sort((a, b) =>
+      new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime()
+    );
+    
+    // Delete oldest 50% of files
+    const filesToDelete = sortedBlobs.slice(0, Math.floor(sortedBlobs.length * 0.5));
+    const deletionPromises = filesToDelete.map(blob =>
+      del(blob.url).catch(error =>
+        console.error(`Failed to delete blob ${blob.pathname}:`, error)
+      )
+    );
+    
+    await Promise.allSettled(deletionPromises);
+    
+    const deletedSize = filesToDelete.reduce((sum, blob) => sum + blob.size, 0);
+    console.log(`Cleaned up ${filesToDelete.length} files, freed ${Math.round(deletedSize / 1024 / 1024)}MB`);
+    
+  } catch (error) {
+    console.error('Failed to manage blob cache size:', error);
+    // Don't throw - cache management failure shouldn't break file serving
+  }
+}
+
+// Update blob access time by re-uploading with updated metadata
+async function updateBlobAccessTime(cacheKey: string, existingUrl: string): Promise<void> {
+  try {
+    // Since Vercel Blob doesn't support updating metadata directly,
+    // we'll fetch the file and re-upload it to update the uploadedAt timestamp
+    const response = await fetch(existingUrl);
+    if (response.ok) {
+      const buffer = await response.arrayBuffer();
+      const blobPath = `pdf-cache/${cacheKey}`;
+      await put(blobPath, buffer, {
+        access: 'public',
+        contentType: 'application/pdf'
+      });
+      console.log(`Updated access time for cached file: ${cacheKey}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update access time for ${cacheKey}:`, error);
+    // Don't throw - access time update failure shouldn't break file serving
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filePath: string[] }> }
@@ -72,19 +172,44 @@ export async function GET(
   const cacheKey = getCacheKey(filePathFromUrl);
   const cachedFilePath = path.join(PDF_CACHE_DIR, cacheKey);
 
-  try {
-    // 1. Check if file exists in cache
-    await fs.access(cachedFilePath); // Throws if file doesn't exist
-    console.log(`Serving PDF from cache: ${filePathFromUrl} (Cache key: ${cacheKey})`);
-    const fileBuffer = await fs.readFile(cachedFilePath);
-    const headers = new Headers();
-    headers.set('Content-Type', 'application/pdf');
-    const safeFilename = encodeURIComponent(path.basename(filePathFromUrl) || 'report.pdf');
-    headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
-    return new NextResponse(fileBuffer, { status: 200, headers });
-  } catch (error) {
-    // File not in cache or other error accessing it, proceed to fetch
-    console.log(`PDF not in cache or error accessing cache for ${filePathFromUrl}. Fetching from source.`);
+  // 1. Check if file exists in cache
+  if (isProduction) {
+    // Use Vercel Blob storage in production
+    const blobUrl = await checkBlobCache(cacheKey);
+    if (blobUrl) {
+      console.log(`Serving PDF from Vercel Blob cache: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+      
+      // Update access time in background (don't await to avoid slowing down response)
+      updateBlobAccessTime(cacheKey, blobUrl).catch(error =>
+        console.error('Background access time update failed:', error)
+      );
+      
+      // Fetch and serve the cached file
+      const blobResponse = await fetch(blobUrl);
+      if (blobResponse.ok) {
+        const fileBuffer = await blobResponse.arrayBuffer();
+        const headers = new Headers();
+        headers.set('Content-Type', 'application/pdf');
+        const safeFilename = encodeURIComponent(path.basename(filePathFromUrl) || 'report.pdf');
+        headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
+        return new NextResponse(fileBuffer, { status: 200, headers });
+      }
+    }
+  } else {
+    // Use local file system cache in development
+    try {
+      await fs.access(cachedFilePath); // Throws if file doesn't exist
+      console.log(`Serving PDF from local cache: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+      const fileBuffer = await fs.readFile(cachedFilePath);
+      const headers = new Headers();
+      headers.set('Content-Type', 'application/pdf');
+      const safeFilename = encodeURIComponent(path.basename(filePathFromUrl) || 'report.pdf');
+      headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
+      return new NextResponse(fileBuffer, { status: 200, headers });
+    } catch (error) {
+      // File not in cache or other error accessing it, proceed to fetch
+      console.log(`PDF not in local cache or error accessing cache for ${filePathFromUrl}. Fetching from source.`);
+    }
   }
 
   // 2. If not in cache, find Google Drive link
@@ -110,13 +235,26 @@ export async function GET(
     const pdfBuffer = await response.arrayBuffer();
 
     // 4. Save to cache
-    // TODO: Implement cache size management (e.g., LRU eviction if > 5GB)
-    try {
-      await fs.writeFile(cachedFilePath, Buffer.from(pdfBuffer));
-      console.log(`PDF cached: ${filePathFromUrl} (Cache key: ${cacheKey})`);
-    } catch (cacheError) {
-      console.error(`Failed to write PDF to cache (${cacheKey}):`, cacheError);
-      // Continue serving the file even if caching fails
+    if (isProduction) {
+      // Store in Vercel Blob storage
+      try {
+        const blobUrl = await storeBlobCache(cacheKey, pdfBuffer);
+        if (blobUrl) {
+          console.log(`PDF cached in Vercel Blob: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+        }
+      } catch (cacheError) {
+        console.error(`Failed to write PDF to Vercel Blob cache (${cacheKey}):`, cacheError);
+        // Continue serving the file even if caching fails
+      }
+    } else {
+      // Store in local file system (development)
+      try {
+        await fs.writeFile(cachedFilePath, Buffer.from(pdfBuffer));
+        console.log(`PDF cached locally: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+      } catch (cacheError) {
+        console.error(`Failed to write PDF to local cache (${cacheKey}):`, cacheError);
+        // Continue serving the file even if caching fails
+      }
     }
 
     // 5. Serve to client
