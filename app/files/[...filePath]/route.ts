@@ -33,12 +33,15 @@ const convertToGoogleDriveDirectLink = (googleDriveLink: string): string => {
   const fileIdMatch = googleDriveLink.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileIdMatch) {
     const fileId = fileIdMatch[1];
-    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    // Use confirm=t to bypass virus warning for large files
+    return `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`;
   }
   if (googleDriveLink.includes('drive.google.com/uc?id=')) {
     const idMatch = googleDriveLink.match(/id=([a-zA-Z0-9_-]+)/);
     if (idMatch) {
-      return `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
+      // Add confirm=t parameter if not already present
+      const baseUrl = `https://drive.google.com/uc?export=download&id=${idMatch[1]}`;
+      return baseUrl.includes('confirm=') ? baseUrl : `${baseUrl}&confirm=t`;
     }
   }
   return googleDriveLink;
@@ -163,6 +166,40 @@ async function updateBlobAccessTime(cacheKey: string, existingUrl: string): Prom
   }
 }
 
+// Helper function to cache PDF and serve
+async function cachePdfAndServe(pdfBuffer: ArrayBuffer, cacheKey: string, filePathFromUrl: string, isProduction: boolean, cachedFilePath: string): Promise<void> {
+  if (isProduction) {
+    // Store in Vercel Blob storage
+    try {
+      const blobUrl = await storeBlobCache(cacheKey, pdfBuffer);
+      if (blobUrl) {
+        console.log(`PDF cached in Vercel Blob: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+      }
+    } catch (cacheError) {
+      console.error(`Failed to write PDF to Vercel Blob cache (${cacheKey}):`, cacheError);
+      // Continue serving the file even if caching fails
+    }
+  } else {
+    // Store in local file system (development)
+    try {
+      await fs.writeFile(cachedFilePath, Buffer.from(pdfBuffer));
+      console.log(`PDF cached locally: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+    } catch (cacheError) {
+      console.error(`Failed to write PDF to local cache (${cacheKey}):`, cacheError);
+      // Continue serving the file even if caching fails
+    }
+  }
+}
+
+// Helper function to serve PDF response
+function servePdf(pdfBuffer: ArrayBuffer, filePathFromUrl: string): NextResponse {
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/pdf');
+  const safeFilename = encodeURIComponent(path.basename(filePathFromUrl) || 'report.pdf');
+  headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
+  return new NextResponse(pdfBuffer, { status: 200, headers });
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filePath: string[] }> }
@@ -225,47 +262,104 @@ export async function GET(
   console.log(`Fetching PDF from: ${directDownloadUrl}`);
 
   try {
-    // 3. Fetch from Google Drive
-    const response = await fetch(directDownloadUrl);
+    // 3. Fetch from Google Drive with enhanced error handling
+    const response = await fetch(directDownloadUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      redirect: 'follow' // Follow redirects automatically
+    });
+    
     if (!response.ok || !response.body) {
       console.error(`Failed to fetch PDF from ${directDownloadUrl}: ${response.status} ${response.statusText}`);
       return new NextResponse(`Failed to fetch PDF: ${response.statusText}`, { status: response.status });
     }
 
-    const pdfBuffer = await response.arrayBuffer();
-
-    // 4. Save to cache
-    if (isProduction) {
-      // Store in Vercel Blob storage
-      try {
-        const blobUrl = await storeBlobCache(cacheKey, pdfBuffer);
-        if (blobUrl) {
-          console.log(`PDF cached in Vercel Blob: ${filePathFromUrl} (Cache key: ${cacheKey})`);
+    // Check if we got HTML instead of PDF (virus warning page)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+      console.log('Received HTML response, attempting to extract download link from virus warning page');
+      
+      const htmlText = await response.text();
+      // Look for the form action URL and extract form parameters
+      const formActionMatch = htmlText.match(/action="([^"]+)"/);
+      const idMatch = htmlText.match(/name="id" value="([^"]+)"/);
+      const exportMatch = htmlText.match(/name="export" value="([^"]+)"/);
+      const authUserMatch = htmlText.match(/name="authuser" value="([^"]+)"/);
+      const confirmMatch = htmlText.match(/name="confirm" value="([^"]+)"/);
+      const uuidMatch = htmlText.match(/name="uuid" value="([^"]+)"/);
+      const atMatch = htmlText.match(/name="at" value="([^"]+)"/);
+      
+      if (formActionMatch && idMatch) {
+        // Construct the download URL with all form parameters
+        const baseUrl = formActionMatch[1];
+        const params = new URLSearchParams();
+        params.set('id', idMatch[1]);
+        if (exportMatch) params.set('export', exportMatch[1]);
+        if (authUserMatch) params.set('authuser', authUserMatch[1]);
+        if (confirmMatch) params.set('confirm', confirmMatch[1]);
+        if (uuidMatch) params.set('uuid', uuidMatch[1]);
+        if (atMatch) params.set('at', atMatch[1]);
+        
+        const actualDownloadUrl = `${baseUrl}?${params.toString()}`;
+        console.log(`Constructed download URL from virus warning form: ${actualDownloadUrl}`);
+        
+        // Fetch the actual file
+        const fileResponse = await fetch(actualDownloadUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          },
+          redirect: 'follow'
+        });
+        
+        if (!fileResponse.ok || !fileResponse.body) {
+          console.error(`Failed to fetch PDF from actual download URL ${actualDownloadUrl}: ${fileResponse.status} ${fileResponse.statusText}`);
+          console.log('Secondary fetch failed, redirecting to Google Drive for manual download');
+          return NextResponse.redirect(googleDriveUrl, 302);
         }
-      } catch (cacheError) {
-        console.error(`Failed to write PDF to Vercel Blob cache (${cacheKey}):`, cacheError);
-        // Continue serving the file even if caching fails
-      }
-    } else {
-      // Store in local file system (development)
-      try {
-        await fs.writeFile(cachedFilePath, Buffer.from(pdfBuffer));
-        console.log(`PDF cached locally: ${filePathFromUrl} (Cache key: ${cacheKey})`);
-      } catch (cacheError) {
-        console.error(`Failed to write PDF to local cache (${cacheKey}):`, cacheError);
-        // Continue serving the file even if caching fails
+        
+        const pdfBuffer = await fileResponse.arrayBuffer();
+        
+        // Verify it's actually a PDF
+        const uint8Array = new Uint8Array(pdfBuffer);
+        if (uint8Array.length < 4 ||
+            uint8Array[0] !== 0x25 || uint8Array[1] !== 0x50 ||
+            uint8Array[2] !== 0x44 || uint8Array[3] !== 0x46) {
+          console.error('Downloaded file from virus warning form is not a valid PDF');
+          console.log('Invalid PDF received, redirecting to Google Drive for manual download');
+          return NextResponse.redirect(googleDriveUrl, 302);
+        }
+        
+        // Cache and serve the PDF
+        await cachePdfAndServe(pdfBuffer, cacheKey, filePathFromUrl, isProduction, cachedFilePath);
+        return servePdf(pdfBuffer, filePathFromUrl);
+      } else {
+        console.log('Could not parse virus warning form parameters, redirecting to Google Drive');
+        // Fallback: redirect to the original Google Drive link for manual download
+        return NextResponse.redirect(googleDriveUrl, 302);
       }
     }
 
-    // 5. Serve to client
-    const headers = new Headers();
-    headers.set('Content-Type', 'application/pdf');
-    const safeFilename = encodeURIComponent(path.basename(filePathFromUrl) || 'report.pdf');
-    headers.set('Content-Disposition', `inline; filename="${safeFilename}"`);
-    return new NextResponse(pdfBuffer, { status: 200, headers });
+    const pdfBuffer = await response.arrayBuffer();
+    
+    // Verify it's actually a PDF
+    const uint8Array = new Uint8Array(pdfBuffer);
+    if (uint8Array.length < 4 ||
+        uint8Array[0] !== 0x25 || uint8Array[1] !== 0x50 ||
+        uint8Array[2] !== 0x44 || uint8Array[3] !== 0x46) {
+      console.error('Downloaded file is not a valid PDF');
+      console.log('Invalid PDF received, redirecting to Google Drive for manual download');
+      return NextResponse.redirect(googleDriveUrl, 302);
+    }
+
+    // 4. Cache and serve the PDF
+    await cachePdfAndServe(pdfBuffer, cacheKey, filePathFromUrl, isProduction, cachedFilePath);
+    return servePdf(pdfBuffer, filePathFromUrl);
 
   } catch (fetchError) {
     console.error(`Error fetching PDF from ${directDownloadUrl}:`, fetchError);
-    return new NextResponse('Error fetching PDF', { status: 500 });
+    console.log('Fetch failed, redirecting to Google Drive for manual download');
+    // Fallback: redirect to the original Google Drive link for manual download
+    return NextResponse.redirect(googleDriveUrl, 302);
   }
 }
