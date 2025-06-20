@@ -55,6 +55,15 @@ export interface Translations {
   fileNotFound: string;
   errorAccessingFile: string;
   noFilePathAvailable: string;
+  
+  // Archive introduction
+  archiveTitle: string;
+  archiveDescription: string;
+  archiveSource: string;
+  fullTextSearchTitle: string;
+  fullTextSearchDescription: string;
+  archiveNote: string;
+  lastUpdated: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -112,7 +121,16 @@ export const translations: Record<Language, Translations> = {
     // File operations
     fileNotFound: 'File not found',
     errorAccessingFile: 'Error accessing file',
-    noFilePathAvailable: 'No file path available for'
+    noFilePathAvailable: 'No file path available for',
+    
+    // Archive introduction
+    archiveTitle: 'About this Archive',
+    archiveDescription: 'This webpage contains over 600 PDF reports and publications from the Hong Kong Office of The Ombudsman, published online between 1994 and May 2025. These documents are sourced from the Office\'s official website content, as preserved in the Internet Archive over the years.\n\nThe files were originally archived using the Wayback Machine by Archive-It (for the Government Records Service of Hong Kong), Archive Team, Alexa Internet, Common Crawl, and others.',
+    archiveSource: 'The files were originally archived using the Wayback Machine by various organizations including Archive-It, Archive Team, Alexa Internet, and Common Crawl.',
+    fullTextSearchTitle: 'Full-text Search',
+    fullTextSearchDescription: 'The files have been organized and processed for OCR using artificial intelligence to facilitate searching. Users can also perform full-text searches within this archive\'s Pinpoint library. Google Boolean Search Operators can be used to refine searches for greater accuracy.',
+    archiveNote: 'Please note that there may be omissions in the document library, and some file names may contain errors. We apologize for any inconvenience. Please visit this Github Repository to report errors or suggest additional documents.',
+    lastUpdated: 'Last updated: 20 June, 2025'
   },
   
   'zh-HK': {
@@ -169,7 +187,16 @@ export const translations: Record<Language, Translations> = {
     // File operations
     fileNotFound: '找不到檔案',
     errorAccessingFile: '存取檔案時發生錯誤',
-    noFilePathAvailable: '沒有可用的檔案路徑'
+    noFilePathAvailable: '沒有可用的檔案路徑',
+    
+    // Archive introduction
+    archiveTitle: '文件庫簡介',
+    archiveDescription: '此網頁收錄了香港申訴專員公署在1994年至2025年5月期間，於網上發表的600多份PDF報告及刊物。\n\n文件源自公署官方網站內容，備存於 Internet Archive 。檔案最初由Archive-It (for the Government Records Service of Hong Kong)、Archive Team、Alexa Internet、Common Crawl及其他方面，透過Wayback Machine進行備份。',
+    archiveSource: '檔案最初由Archive-It、Archive Team、Alexa Internet、Common Crawl及其他方面，透過Wayback Machine進行備份。',
+    fullTextSearchTitle: '內文搜尋',
+    fullTextSearchDescription: '所有檔案均經人工智能整理並進行了光學字符識別（OCR）處理，以便於搜尋。使用者亦可前往此 Pinpoint 鏡像文件庫進行全文搜尋。使用者可使用 Google Boolean Search Operators 協助精準搜尋。',
+    archiveNote: '請注意文件庫可能存在遺漏，部分檔案名稱也可能出現錯誤，敬請見諒。如欲回報錯誤或建議增補文件，請前往此 Github Repository 留言。',
+    lastUpdated: '最後更新於： 2025年6月20日'
   }
 };
 

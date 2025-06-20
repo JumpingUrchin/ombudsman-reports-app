@@ -109,6 +109,104 @@ export default async function LocalePage({ params }: LocalePageProps) {
               </div>
             </div>
 
+            {/* Archive Introduction Section */}
+            <div className="mb-8 bg-white rounded-lg border p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                {t.archiveTitle}
+              </h2>
+              <div className="prose max-w-none text-gray-700 space-y-4">
+                <div className="whitespace-pre-line">
+                  {t.archiveDescription}
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {t.fullTextSearchTitle}
+                  </h3>
+                  <p className="text-gray-700">
+                    {locale === 'zh-HK' ? (
+                      <>
+                        所有檔案均經人工智能整理並進行了光學字符識別（OCR）處理，以便於搜尋。使用者亦可前往此{' '}
+                        <a
+                          href="https://journaliststudio.google.com/pinpoint/search?collection=d01fe5c6ae6170f7&utm_source=collection_publish_link"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Pinpoint 鏡像文件庫
+                        </a>
+                        {' '}進行全文搜尋。使用者可使用{' '}
+                        <a
+                          href="http://bit.ly/AllTheOperators"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Google Boolean Search Operators
+                        </a>
+                        {' '}協助精準搜尋。
+                      </>
+                    ) : (
+                      <>
+                        The files have been organized and processed for OCR using artificial intelligence to facilitate searching. Users can also perform full-text searches within this archive&apos;s{' '}
+                        <a
+                          href="https://journaliststudio.google.com/pinpoint/search?collection=d01fe5c6ae6170f7&utm_source=collection_publish_link"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Pinpoint library
+                        </a>
+                        .{' '}
+                        <a
+                          href="http://bit.ly/AllTheOperators"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Google Boolean Search Operators
+                        </a>
+                        {' '}can be used to refine searches for greater accuracy.
+                      </>
+                    )}
+                  </p>
+                </div>
+                
+                <div className="text-sm text-gray-600 border-t pt-4">
+                  <p className="mb-2">
+                    {locale === 'zh-HK' ? (
+                      <>
+                        請注意文件庫可能存在遺漏，部分檔案名稱也可能出現錯誤，敬請見諒。如欲回報錯誤或建議增補文件，請前往此{' '}
+                        <a
+                          href="https://github.com/JumpingUrchin/ombudsman-reports-app"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Github Repository
+                        </a>
+                        {' '}留言。
+                      </>
+                    ) : (
+                      <>
+                        Please note that there may be omissions in the document library, and some file names may contain errors. We apologize for any inconvenience. Please visit this{' '}
+                        <a
+                          href="https://github.com/JumpingUrchin/ombudsman-reports-app"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Github Repository
+                        </a>
+                        {' '}to report errors or suggest additional documents.
+                      </>
+                    )}
+                  </p>
+                  <p className="italic">{t.lastUpdated}</p>
+                </div>
+              </div>
+            </div>
+
             {initialError && (
               <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
                 <div className="flex">
